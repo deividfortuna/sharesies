@@ -1,0 +1,1 @@
+## Unofficial Sharesies NZ SDK
