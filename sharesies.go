@@ -11,22 +11,22 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-const appSharesiesUrl = "https://app.sharesies.nz/api/"
-const dataSharesiesUrl = "https://data.sharesies.nz/api/"
+const (
+	endpointIdentityLogin  = "https://app.sharesies.nz/api/identity/login"
+	endpointIdentityCheck  = "https://app.sharesies.nz/api/identity/check"
+	endpointIdentityReAuth = "https://app.sharesies.nz/api/identity/reauthenticate"
+	endpointInstruments    = "https://data.sharesies.nz/api/v1/instruments"
+)
 
 type Map map[string]interface{}
-
-type SharesiesCtx struct {
-	token   *jwt.Token
-	profile *Profile
-}
 
 type Sharesies struct {
 	httpClient *http.Client
 	creds      *SharesiesCredentials
-	ctx        *SharesiesCtx
+	ctx        *sharesiesCtx
 }
 
+// Sharesies Cedentials
 type SharesiesCredentials struct {
 	Username string
 	Password string
@@ -40,7 +40,13 @@ type sharesiesRequest struct {
 	headers  map[string]string
 }
 
-func NewSharesies(creds *SharesiesCredentials) (*Sharesies, error) {
+type sharesiesCtx struct {
+	token   *jwt.Token
+	profile *ProfileResponse
+}
+
+// New returns a new Sharesies Client instance
+func New(creds *SharesiesCredentials) (*Sharesies, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
@@ -53,10 +59,10 @@ func NewSharesies(creds *SharesiesCredentials) (*Sharesies, error) {
 	i := &Sharesies{
 		httpClient,
 		creds,
-		&SharesiesCtx{},
+		&sharesiesCtx{},
 	}
 
-	errCtx := i.getSharesiesCtx(i.ctx)
+	errCtx := i.sharesiesCtx(i.ctx)
 	if errCtx != nil {
 		return nil, errCtx
 	}
@@ -64,7 +70,41 @@ func NewSharesies(creds *SharesiesCredentials) (*Sharesies, error) {
 	return i, nil
 }
 
-func (s *Sharesies) getSharesiesCtx(ctx *SharesiesCtx) error {
+// Return Sharesies Profile
+func (s *Sharesies) Profile() (*ProfileResponse, error) {
+	p := &ProfileResponse{}
+	req := &sharesiesRequest{
+		method:   http.MethodGet,
+		url:      endpointIdentityCheck,
+		response: p,
+	}
+	err := s.request(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+// Return Companies/Funds listed on Sharesies
+func (s *Sharesies) Instruments(request *InstrumentsRequest) (*InstrumentResponse, error) {
+	r := &InstrumentResponse{}
+	h, errH := s.getAuthHeaders()
+	if errH != nil {
+		return nil, errH
+	}
+
+	req := &sharesiesRequest{
+		method:   http.MethodPost,
+		url:      endpointInstruments,
+		body:     request,
+		response: r, headers: h,
+	}
+	err := s.request(req)
+	return r, err
+}
+
+func (s *Sharesies) sharesiesCtx(ctx *sharesiesCtx) error {
 	p, err := s.authenticate(s.creds)
 	if err != nil {
 		return err
@@ -82,27 +122,6 @@ func (s *Sharesies) getSharesiesCtx(ctx *SharesiesCtx) error {
 	return nil
 }
 
-func (s *Sharesies) Profile() (*Profile, error) {
-	r := &Profile{}
-	err := s.request(&sharesiesRequest{method: http.MethodGet, url: appSharesiesUrl + "identity/check", response: r})
-	if err != nil {
-		return nil, err
-	}
-
-	return r, nil
-}
-
-func (s *Sharesies) Companies(request *InstrumentsRequest) (*InstrumentResponse, error) {
-	r := &InstrumentResponse{}
-	h, errH := s.getAuthHeaders()
-	if errH != nil {
-		return nil, errH
-	}
-
-	err := s.request(&sharesiesRequest{method: http.MethodPost, url: dataSharesiesUrl + "v1/instruments", body: request, response: r, headers: h})
-	return r, err
-}
-
 func (s *Sharesies) getAuthHeaders() (map[string]string, error) {
 	err := s.ctx.token.Claims.Valid()
 	if err != nil {
@@ -117,20 +136,31 @@ func (s *Sharesies) getAuthHeaders() (map[string]string, error) {
 	}, nil
 }
 
-func (s *Sharesies) authenticate(creds *SharesiesCredentials) (*Profile, error) {
-	r := &Profile{}
-	err := s.request(&sharesiesRequest{method: http.MethodPost, url: appSharesiesUrl + "identity/login", body: &Map{"email": creds.Username, "password": creds.Password, "remember": true}, response: r})
-	if !r.Authenticated {
+func (s *Sharesies) authenticate(creds *SharesiesCredentials) (*ProfileResponse, error) {
+	p := &ProfileResponse{}
+	req := &sharesiesRequest{
+		method:   http.MethodPost,
+		url:      endpointIdentityLogin,
+		body:     &Map{"email": creds.Username, "password": creds.Password, "remember": true},
+		response: p,
+	}
+	err := s.request(req)
+	if !p.Authenticated {
 		return nil, fmt.Errorf("failed to authenticate: %w", err)
 	}
 
-	return r, err
+	return p, err
 }
 
-func (s *Sharesies) reAuthenticate() (*Profile, error) {
-	p := &Profile{}
-
-	err := s.request(&sharesiesRequest{method: http.MethodPost, url: appSharesiesUrl + "identity/reauthenticate", body: &Map{"password": s.creds.Password, "acting_as_id": s.ctx.profile.UserList[0].ID}, response: p})
+func (s *Sharesies) reAuthenticate() (*ProfileResponse, error) {
+	p := &ProfileResponse{}
+	req := &sharesiesRequest{
+		method:   http.MethodPost,
+		url:      endpointIdentityReAuth,
+		body:     &Map{"password": s.creds.Password, "acting_as_id": s.ctx.profile.UserList[0].ID},
+		response: p,
+	}
+	err := s.request(req)
 	if err != nil {
 		return nil, err
 	}

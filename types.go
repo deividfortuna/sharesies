@@ -2,7 +2,7 @@ package sharesies
 
 import "time"
 
-type Profile struct {
+type ProfileResponse struct {
 	Authenticated           bool            `json:"authenticated"`
 	AutoinvestOrder         AutoinvestOrder `json:"autoinvest_order"`
 	CanEnterAddressToken    bool            `json:"can_enter_address_token"`
