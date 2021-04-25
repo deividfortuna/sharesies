@@ -1,5 +1,7 @@
 package sharesies
 
+import "time"
+
 type Profile struct {
 	Authenticated           bool            `json:"authenticated"`
 	AutoinvestOrder         AutoinvestOrder `json:"autoinvest_order"`
@@ -163,4 +165,59 @@ type UserList struct {
 	PreferredName string `json:"preferred_name"`
 	Primary       bool   `json:"primary"`
 	State         string `json:"state"`
+}
+
+type InstrumentsRequest struct {
+	Page            int      `json:"page"`
+	Perpage         int      `json:"perPage"`
+	Sort            string   `json:"sort"`
+	Pricechangetime string   `json:"priceChangeTime"`
+	Query           string   `json:"query"`
+	Instruments     []string `json:"instruments"`
+}
+
+type InstrumentResponse struct {
+	Total          int       `json:"total"`
+	Currentpage    int       `json:"currentPage"`
+	Resultsperpage int       `json:"resultsPerPage"`
+	Numberofpages  int       `json:"numberOfPages"`
+	Instruments    []Company `json:"instruments"`
+}
+type Logos struct {
+	Wide  string `json:"wide"`
+	Thumb string `json:"thumb"`
+	Micro string `json:"micro"`
+}
+
+type Company struct {
+	ID                        string      `json:"id"`
+	Urlslug                   string      `json:"urlSlug"`
+	Instrumenttype            string      `json:"instrumentType"`
+	Symbol                    string      `json:"symbol"`
+	Kidsrecommended           bool        `json:"kidsRecommended"`
+	Isvolatile                bool        `json:"isVolatile"`
+	Name                      string      `json:"name"`
+	Description               string      `json:"description"`
+	Categories                []string    `json:"categories"`
+	Logoidentifier            string      `json:"logoIdentifier"`
+	Logos                     Logos       `json:"logos"`
+	Riskrating                int         `json:"riskRating"`
+	Marketprice               string      `json:"marketPrice"`
+	Marketlastcheck           time.Time   `json:"marketLastCheck"`
+	Tradingstatus             string      `json:"tradingStatus"`
+	Exchangecountry           string      `json:"exchangeCountry"`
+	Peratio                   string      `json:"peRatio"`
+	Marketcap                 int64       `json:"marketCap"`
+	Websiteurl                string      `json:"websiteUrl"`
+	Exchange                  string      `json:"exchange"`
+	Legacyimageurl            interface{} `json:"legacyImageUrl"`
+	Dominantcolour            string      `json:"dominantColour"`
+	Pdsdriveid                interface{} `json:"pdsDriveId"`
+	Assetmanager              interface{} `json:"assetManager"`
+	Fixedfeespread            interface{} `json:"fixedFeeSpread"`
+	Managementfeepercent      interface{} `json:"managementFeePercent"`
+	Grossdividendyieldpercent string      `json:"grossDividendYieldPercent"`
+	Annualisedreturnpercent   string      `json:"annualisedReturnPercent"`
+	Ceo                       string      `json:"ceo"`
+	Employees                 int         `json:"employees"`
 }
