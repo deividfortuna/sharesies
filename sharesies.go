@@ -9,6 +9,7 @@ import (
 	"net/http/cookiejar"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 	endpointIdentityCheck  = "https://app.sharesies.nz/api/identity/check"
 	endpointIdentityReAuth = "https://app.sharesies.nz/api/identity/reauthenticate"
 	endpointInstruments    = "https://data.sharesies.nz/api/v1/instruments"
+	endpointCostBuy        = "https://app.sharesies.nz/api/order/cost-buy"
+	endpointCreateBuy      = "https://app.sharesies.nz/api/order/create-buy"
 )
 
 type Map map[string]interface{}
@@ -104,6 +107,55 @@ func (s *Sharesies) Instruments(request *InstrumentsRequest) (*InstrumentRespons
 	return r, err
 }
 
+// Cost to buy stocks from the NZX Market
+func (s *Sharesies) CostBuy(fundId string, amount float64) (*CostBuyResponse, error) {
+	r := &CostBuyResponse{}
+	o := &Order{Type: OrderTypeDollarMarket, CurrencyAmount: fmt.Sprintf("%.2f", amount)}
+	cr := &CostBuyRequest{
+		FundID:     fundId,
+		ActingAsID: s.ctx.profile.UserList[0].ID,
+		Order:      o,
+	}
+
+	s.reAuthenticate()
+
+	req := &sharesiesRequest{
+		method:   http.MethodPost,
+		url:      endpointCostBuy,
+		body:     cr,
+		response: r,
+	}
+
+	err := s.request(req)
+	return r, err
+}
+
+// Purchase stocks from the NZX Market
+func (s *Sharesies) Buy(costBuy *CostBuyResponse) (*ProfileResponse, error) {
+	r := &ProfileResponse{}
+
+	br := &CreateBuyRequest{
+		FundID:           costBuy.FundID,
+		ActingAsID:       s.ctx.profile.UserList[0].ID,
+		Order:            costBuy.Request,
+		PaymentBreakdown: &costBuy.PaymentBreakdown,
+		IdempotencyKey:   uuid.NewString(),
+		ExpectedFee:      costBuy.ExpectedFee,
+	}
+
+	s.reAuthenticate()
+
+	req := &sharesiesRequest{
+		method:   http.MethodPost,
+		url:      endpointCreateBuy,
+		body:     br,
+		response: r,
+	}
+
+	err := s.request(req)
+	return r, err
+}
+
 func (s *Sharesies) sharesiesCtx(ctx *sharesiesCtx) error {
 	p, err := s.authenticate(s.creds)
 	if err != nil {
@@ -169,7 +221,7 @@ func (s *Sharesies) reAuthenticate() (*ProfileResponse, error) {
 		return nil, fmt.Errorf("failed to re-authenticate: %w", err)
 	}
 
-	token, _, err := new(jwt.Parser).ParseUnverified(p.DistillToken, jwt.MapClaims{})
+	token, _, _ := new(jwt.Parser).ParseUnverified(p.DistillToken, jwt.MapClaims{})
 	s.ctx.token = token
 	s.ctx.profile = p
 

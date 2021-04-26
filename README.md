@@ -1,12 +1,13 @@
-## Unofficial Sharesies NZ SDK
+## Unofficial Go Sharesies NZ SDK
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/deividfortuna/sharesies.svg)](https://pkg.go.dev/github.com/deividfortuna/sharesies)
 
+![Sharesies NZ](https://images.squarespace-cdn.com/content/58bc788c59cc68b9696b9ee0/1543372882154-5E6PGXVJGOIQU30NTJKJ/sharesies.png?content-type=image%2Fpng)
 
-### Get Started
+### Installation
 `go get github.com/deividfortuna/sharesies`
 
-### New Sharesies Client
+### Get Started
 ```go
 c := &sharesies.SharesiesCredentials{
 	Username: "email@exmaple.com",
@@ -18,7 +19,7 @@ if err != nil {
 }
 ```
 
-### Get companies/funds listed
+### Companies/funds listed
 ```go
 ir := &sharesies.InstrumentsRequest{
 	Page:            1,
@@ -32,6 +33,21 @@ if err != nil {
 }
 
 fmt.Println(i)
+```
+
+### Buy stock
+```go
+fundId := "0545fbc5-b579-4944-9057-55d01849a493"
+costBuy, err := s.CostBuy(fundId, 100.00)
+if err != nil {
+	log.Fatal(err)
+}
+p, err := s.Buy(costBuy)
+if err != nil {
+	log.Fatal(err)
+}
+
+fmt.Println(p)
 ```
 
 ## LICENSE

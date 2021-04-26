@@ -2,6 +2,13 @@ package sharesies
 
 import "time"
 
+const (
+	OrderTypeDollarMarket = "dollar_market"
+
+	PaymentCurrency = "nzd"
+	PaymentType     = "direct"
+)
+
 type ProfileResponse struct {
 	Authenticated           bool            `json:"authenticated"`
 	AutoinvestOrder         AutoinvestOrder `json:"autoinvest_order"`
@@ -220,4 +227,39 @@ type Company struct {
 	Annualisedreturnpercent   string      `json:"annualisedReturnPercent"`
 	Ceo                       string      `json:"ceo"`
 	Employees                 int         `json:"employees"`
+}
+
+type CostBuyRequest struct {
+	FundID     string `json:"fund_id"`
+	ActingAsID string `json:"acting_as_id"`
+	Order      *Order `json:"order"`
+}
+
+type Order struct {
+	Type           string `json:"type"`
+	CurrencyAmount string `json:"currency_amount"`
+}
+
+type CostBuyResponse struct {
+	ExpectedFee      string             `json:"expected_fee"`
+	FundID           string             `json:"fund_id"`
+	PaymentBreakdown []PaymentBreakdown `json:"payment_breakdown"`
+	Request          *Order             `json:"request"`
+	TotalCost        string             `json:"total_cost"`
+	Type             string             `json:"type"`
+}
+
+type PaymentBreakdown struct {
+	Currency     string `json:"currency"`
+	TargetAmount string `json:"target_amount"`
+	Type         string `json:"type"`
+}
+
+type CreateBuyRequest struct {
+	FundID           string              `json:"fund_id"`
+	ActingAsID       string              `json:"acting_as_id"`
+	Order            *Order              `json:"order"`
+	IdempotencyKey   string              `json:"idempotency_key"`
+	PaymentBreakdown *[]PaymentBreakdown `json:"payment_breakdown"`
+	ExpectedFee      string              `json:"expected_fee"`
 }
