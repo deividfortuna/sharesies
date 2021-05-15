@@ -2,6 +2,7 @@ package sharesies
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,10 +24,14 @@ const (
 
 type Map map[string]interface{}
 
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type Sharesies struct {
-	httpClient *http.Client
+	HttpClient HTTPClient
 	creds      *SharesiesCredentials
-	ctx        *sharesiesCtx
+	session    *sharesiesSession
 }
 
 // Sharesies Cedentials
@@ -43,56 +48,82 @@ type sharesiesRequest struct {
 	headers  map[string]string
 }
 
-type sharesiesCtx struct {
+type sharesiesSession struct {
 	token   *jwt.Token
 	profile *ProfileResponse
 }
 
-// New returns a new Sharesies Client instance
-func New(creds *SharesiesCredentials) (*Sharesies, error) {
-	jar, err := cookiejar.New(nil)
+// New credentials struct
+func NewCredentials(username string, passoword string) *SharesiesCredentials {
+	return &SharesiesCredentials{Username: username, Password: passoword}
+}
+
+// NewClient returns a new Sharesies Client instance
+func NewClient() (*Sharesies, error) {
+	j, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
 	}
 
 	httpClient := &http.Client{
-		Jar: jar,
+		Jar: j,
 	}
 
-	i := &Sharesies{
+	return &Sharesies{
 		httpClient,
-		creds,
-		&sharesiesCtx{},
+		nil,
+		nil,
+	}, nil
+}
+
+func (s *Sharesies) Authenticate(ctx context.Context, creds *SharesiesCredentials) (*ProfileResponse, error) {
+	p := &ProfileResponse{}
+	req := &sharesiesRequest{
+		method:   http.MethodPost,
+		url:      endpointIdentityLogin,
+		body:     &Map{"email": creds.Username, "password": creds.Password, "remember": true},
+		response: p,
+	}
+	err := s.request(ctx, req)
+	if !p.Authenticated {
+		return nil, fmt.Errorf("failed to authenticate: %w", err)
 	}
 
-	errCtx := i.sharesiesCtx(i.ctx)
+	errCtx := s.authenticated(p)
 	if errCtx != nil {
 		return nil, errCtx
 	}
 
-	return i, nil
+	s.creds = creds
+
+	return p, err
 }
 
 // Return Sharesies Profile
-func (s *Sharesies) Profile() (*ProfileResponse, error) {
+func (s *Sharesies) Profile(ctx context.Context) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
 	req := &sharesiesRequest{
 		method:   http.MethodGet,
 		url:      endpointIdentityCheck,
 		response: p,
 	}
-	err := s.request(req)
+	err := s.request(ctx, req)
 	if err != nil {
 		return nil, err
+	}
+
+	er := s.authenticated(p)
+	if er != nil {
+		return nil, er
 	}
 
 	return p, nil
 }
 
 // Return Companies/Funds listed on Sharesies
-func (s *Sharesies) Instruments(request *InstrumentsRequest) (*InstrumentResponse, error) {
+func (s *Sharesies) Instruments(ctx context.Context, request *InstrumentsRequest) (*InstrumentResponse, error) {
 	r := &InstrumentResponse{}
-	h, errH := s.getAuthHeaders()
+	h, errH := s.headers(ctx)
 	if errH != nil {
 		return nil, errH
 	}
@@ -103,21 +134,21 @@ func (s *Sharesies) Instruments(request *InstrumentsRequest) (*InstrumentRespons
 		body:     request,
 		response: r, headers: h,
 	}
-	err := s.request(req)
+	err := s.request(ctx, req)
 	return r, err
 }
 
 // Cost to buy stocks from the NZX Market
-func (s *Sharesies) CostBuy(fundId string, amount float64) (*CostBuyResponse, error) {
+func (s *Sharesies) CostBuy(ctx context.Context, fundId string, amount float64) (*CostBuyResponse, error) {
 	r := &CostBuyResponse{}
 	o := &Order{Type: OrderTypeDollarMarket, CurrencyAmount: fmt.Sprintf("%.2f", amount)}
 	cr := &CostBuyRequest{
 		FundID:     fundId,
-		ActingAsID: s.ctx.profile.UserList[0].ID,
+		ActingAsID: s.session.profile.UserList[0].ID,
 		Order:      o,
 	}
 
-	s.reAuthenticate()
+	s.reAuthenticate(ctx)
 
 	req := &sharesiesRequest{
 		method:   http.MethodPost,
@@ -126,24 +157,24 @@ func (s *Sharesies) CostBuy(fundId string, amount float64) (*CostBuyResponse, er
 		response: r,
 	}
 
-	err := s.request(req)
+	err := s.request(ctx, req)
 	return r, err
 }
 
 // Purchase stocks from the NZX Market
-func (s *Sharesies) Buy(costBuy *CostBuyResponse) (*ProfileResponse, error) {
+func (s *Sharesies) Buy(ctx context.Context, costBuy *CostBuyResponse) (*ProfileResponse, error) {
 	r := &ProfileResponse{}
 
 	br := &CreateBuyRequest{
 		FundID:           costBuy.FundID,
-		ActingAsID:       s.ctx.profile.UserList[0].ID,
+		ActingAsID:       s.session.profile.UserList[0].ID,
 		Order:            costBuy.Request,
 		PaymentBreakdown: &costBuy.PaymentBreakdown,
 		IdempotencyKey:   uuid.NewString(),
 		ExpectedFee:      costBuy.ExpectedFee,
 	}
 
-	s.reAuthenticate()
+	s.reAuthenticate(ctx)
 
 	req := &sharesiesRequest{
 		method:   http.MethodPost,
@@ -152,67 +183,48 @@ func (s *Sharesies) Buy(costBuy *CostBuyResponse) (*ProfileResponse, error) {
 		response: r,
 	}
 
-	err := s.request(req)
+	err := s.request(ctx, req)
 	return r, err
 }
 
-func (s *Sharesies) sharesiesCtx(ctx *sharesiesCtx) error {
-	p, err := s.authenticate(s.creds)
-	if err != nil {
-		return err
-	}
-
+func (s *Sharesies) authenticated(p *ProfileResponse) error {
 	claims := &jwt.StandardClaims{}
 	token, _, err := new(jwt.Parser).ParseUnverified(p.DistillToken, claims)
 	if err != nil {
 		return nil
 	}
 
-	ctx.token = token
-	ctx.profile = p
+	s.session = &sharesiesSession{
+		token:   token,
+		profile: p,
+	}
 
 	return nil
 }
 
-func (s *Sharesies) getAuthHeaders() (map[string]string, error) {
-	err := s.ctx.token.Claims.Valid()
+func (s *Sharesies) headers(ctx context.Context) (map[string]string, error) {
+	err := s.session.token.Claims.Valid()
 	if err != nil {
-		_, err := s.reAuthenticate()
+		_, err := s.reAuthenticate(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return map[string]string{
-		"Authorization": "Bearer" + s.ctx.token.Raw,
+		"Authorization": "Bearer " + s.session.token.Raw,
 	}, nil
 }
 
-func (s *Sharesies) authenticate(creds *SharesiesCredentials) (*ProfileResponse, error) {
-	p := &ProfileResponse{}
-	req := &sharesiesRequest{
-		method:   http.MethodPost,
-		url:      endpointIdentityLogin,
-		body:     &Map{"email": creds.Username, "password": creds.Password, "remember": true},
-		response: p,
-	}
-	err := s.request(req)
-	if !p.Authenticated {
-		return nil, fmt.Errorf("failed to authenticate: %w", err)
-	}
-
-	return p, err
-}
-
-func (s *Sharesies) reAuthenticate() (*ProfileResponse, error) {
+func (s *Sharesies) reAuthenticate(ctx context.Context) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
 	req := &sharesiesRequest{
 		method:   http.MethodPost,
 		url:      endpointIdentityReAuth,
-		body:     &Map{"password": s.creds.Password, "acting_as_id": s.ctx.profile.UserList[0].ID},
+		body:     &Map{"password": s.creds.Password, "acting_as_id": s.session.profile.UserList[0].ID},
 		response: p,
 	}
-	err := s.request(req)
+	err := s.request(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -221,19 +233,20 @@ func (s *Sharesies) reAuthenticate() (*ProfileResponse, error) {
 		return nil, fmt.Errorf("failed to re-authenticate: %w", err)
 	}
 
-	token, _, _ := new(jwt.Parser).ParseUnverified(p.DistillToken, jwt.MapClaims{})
-	s.ctx.token = token
-	s.ctx.profile = p
+	e := s.authenticated(p)
+	if e != nil {
+		return nil, e
+	}
 
 	return p, nil
 }
 
-func (s *Sharesies) request(request *sharesiesRequest) error {
+func (s *Sharesies) request(ctx context.Context, request *sharesiesRequest) error {
 	b := &bytes.Buffer{}
 	e := json.NewEncoder(b)
 	e.Encode(request.body)
 
-	req, err := http.NewRequest(request.method, request.url, b)
+	req, err := http.NewRequestWithContext(ctx, request.method, request.url, b)
 	if err != nil {
 		return err
 	}
@@ -248,7 +261,7 @@ func (s *Sharesies) request(request *sharesiesRequest) error {
 		}
 	}
 
-	res, err := s.httpClient.Do(req)
+	res, err := s.HttpClient.Do(req)
 	if err != nil {
 		return err
 	}
