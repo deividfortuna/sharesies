@@ -9,11 +9,20 @@
 
 ### Get Started
 ```go
+ctx := context.Background()
+s, err := sharesies.NewClient(c)
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+### Authenticate
+```go
 c := &sharesies.SharesiesCredentials{
 	Username: "email@exmaple.com",
 	Password: "your_password_here",
 }
-s, err := sharesies.New(c)
+p, err := s.Authenticate(ctx, creds)
 if err != nil {
 	log.Fatal(err)
 }
@@ -27,7 +36,7 @@ ir := &sharesies.InstrumentsRequest{
 	Sort:            "name",
 	Pricechangetime: "1y",
 }
-i, err := s.Instruments(ir)
+i, err := s.Instruments(ctx, ir)
 if err != nil {
 	log.Fatal(err)
 }
@@ -38,11 +47,11 @@ fmt.Println(i)
 ### Buy stock
 ```go
 fundId := "0545fbc5-b579-4944-9057-55d01849a493"
-costBuy, err := s.CostBuy(fundId, 100.00)
+costBuy, err := s.CostBuy(ctx, fundId, 100.00)
 if err != nil {
 	log.Fatal(err)
 }
-p, err := s.Buy(costBuy)
+b, err := s.Buy(ctx, costBuy)
 if err != nil {
 	log.Fatal(err)
 }
