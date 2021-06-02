@@ -1,0 +1,25 @@
+{
+    "expected_fee": "0.05000000",
+    "fund_id": "b8b7ef58-b270-4762-a256-9d68aebc3e23",
+    "payment_breakdown": [
+        {
+            "currency": "usd",
+            "target_amount": "0.11",
+            "type": "direct"
+        },
+        {
+            "currency": "nzd",
+            "fee": "0.05605426",
+            "rate": "0.708579",
+            "source_amount": "14.02",
+            "target_amount": "9.89",
+            "type": "exchange"
+        }
+    ],
+    "request": {
+        "currency_amount": "10.00",
+        "type": "dollar_market"
+    },
+    "total_cost": "10",
+    "type": "order_cost_buy"
+}

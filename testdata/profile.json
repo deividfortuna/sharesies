@@ -1,0 +1,9 @@
+{
+    "authenticated": true,
+    "distill_token": "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjMzMTc3MTk4OTk4LCJpYXQiOjE2MjAyOTAxOTh9.y8dKrmUuA2BWB1dMIvSzYFf7IloNFq-T89RI6WyYE0w",
+    "user_list": [
+        {
+            "id": "USER_ID"
+        }
+    ]
+}
