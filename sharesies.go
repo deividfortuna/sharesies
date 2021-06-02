@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -24,18 +25,22 @@ const (
 
 type Map map[string]interface{}
 
+var ErrNoJarDefine = errors.New("HttpClient must have a cookie jar defined")
+var ErrAuthentication = errors.New("authentication failed")
+var ErrHttpRequest = errors.New("request to sharesies failed")
+
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
 type Sharesies struct {
 	HttpClient HTTPClient
-	creds      *SharesiesCredentials
-	session    *sharesiesSession
+	creds      *Credentials
+	session    *tokenSession
 }
 
 // Sharesies Cedentials
-type SharesiesCredentials struct {
+type Credentials struct {
 	Username string
 	Password string
 }
@@ -48,35 +53,36 @@ type sharesiesRequest struct {
 	headers  map[string]string
 }
 
-type sharesiesSession struct {
+type tokenSession struct {
 	token   *jwt.Token
 	profile *ProfileResponse
 }
 
-// New credentials struct
-func NewCredentials(username string, passoword string) *SharesiesCredentials {
-	return &SharesiesCredentials{Username: username, Password: passoword}
-}
+// New returns a new Sharesies Client instance
+func New(client *http.Client) (*Sharesies, error) {
+	if client == nil {
+		j, err := cookiejar.New(nil)
+		if err != nil {
+			return nil, err
+		}
 
-// NewClient returns a new Sharesies Client instance
-func NewClient() (*Sharesies, error) {
-	j, err := cookiejar.New(nil)
-	if err != nil {
-		return nil, err
+		client = &http.Client{
+			Jar: j,
+		}
 	}
 
-	httpClient := &http.Client{
-		Jar: j,
+	if client.Jar == nil {
+		return nil, ErrNoJarDefine
 	}
 
 	return &Sharesies{
-		httpClient,
+		client,
 		nil,
 		nil,
 	}, nil
 }
 
-func (s *Sharesies) Authenticate(ctx context.Context, creds *SharesiesCredentials) (*ProfileResponse, error) {
+func (s *Sharesies) Authenticate(ctx context.Context, creds *Credentials) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
 	req := &sharesiesRequest{
 		method:   http.MethodPost,
@@ -86,7 +92,7 @@ func (s *Sharesies) Authenticate(ctx context.Context, creds *SharesiesCredential
 	}
 	err := s.request(ctx, req)
 	if !p.Authenticated {
-		return nil, fmt.Errorf("failed to authenticate: %w", err)
+		return nil, ErrAuthentication
 	}
 
 	errCtx := s.authenticated(p)
@@ -194,7 +200,7 @@ func (s *Sharesies) authenticated(p *ProfileResponse) error {
 		return nil
 	}
 
-	s.session = &sharesiesSession{
+	s.session = &tokenSession{
 		token:   token,
 		profile: p,
 	}
@@ -230,7 +236,7 @@ func (s *Sharesies) reAuthenticate(ctx context.Context) (*ProfileResponse, error
 	}
 
 	if !p.Authenticated {
-		return nil, fmt.Errorf("failed to re-authenticate: %w", err)
+		return nil, ErrAuthentication
 	}
 
 	e := s.authenticated(p)
@@ -267,7 +273,7 @@ func (s *Sharesies) request(ctx context.Context, request *sharesiesRequest) erro
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("expected 200 code, received: %v", res.StatusCode)
+		return ErrHttpRequest
 	}
 
 	bd, err := ioutil.ReadAll(res.Body)

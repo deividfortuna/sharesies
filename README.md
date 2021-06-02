@@ -10,19 +10,15 @@
 ### Get Started
 ```go
 ctx := context.Background()
-s, err := sharesies.NewClient(c)
-if err != nil {
-	log.Fatal(err)
-}
+s, _ := sharesies.New(nil)
 ```
 
 ### Authenticate
 ```go
-c := &sharesies.SharesiesCredentials{
+p, err := s.Authenticate(ctx, &sharesies.SharesiesCredentials{
 	Username: "email@exmaple.com",
 	Password: "your_password_here",
-}
-p, err := s.Authenticate(ctx, creds)
+})
 if err != nil {
 	log.Fatal(err)
 }
@@ -30,13 +26,12 @@ if err != nil {
 
 ### Companies/funds listed
 ```go
-ir := &sharesies.InstrumentsRequest{
+i, err := s.Instruments(ctx, &sharesies.InstrumentsRequest{
 	Page:            1,
 	Perpage:         100,
 	Sort:            "name",
 	Pricechangetime: "1y",
-}
-i, err := s.Instruments(ctx, ir)
+})
 if err != nil {
 	log.Fatal(err)
 }
