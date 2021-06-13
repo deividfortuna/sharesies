@@ -179,7 +179,7 @@ func (s *Sharesies) Buy(ctx context.Context, costBuy *CostBuyResponse) (*Profile
 		FundID:           costBuy.FundID,
 		ActingAsID:       s.session.profile.UserList[0].ID,
 		Order:            costBuy.Request,
-		PaymentBreakdown: &costBuy.PaymentBreakdown,
+		PaymentBreakdown: costBuy.PaymentBreakdown,
 		IdempotencyKey:   uuid.NewString(),
 		ExpectedFee:      costBuy.ExpectedFee,
 	}

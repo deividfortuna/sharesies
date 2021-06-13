@@ -51,7 +51,7 @@ if err != nil {
 	log.Fatal(err)
 }
 
-fmt.Println(p)
+fmt.Println(b)
 ```
 
 ## LICENSE
