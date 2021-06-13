@@ -91,13 +91,17 @@ func (s *Sharesies) Authenticate(ctx context.Context, creds *Credentials) (*Prof
 		response: p,
 	}
 	err := s.request(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
 	if !p.Authenticated {
 		return nil, ErrAuthentication
 	}
 
-	errCtx := s.authenticated(p)
-	if errCtx != nil {
-		return nil, errCtx
+	err = s.authenticated(p)
+	if err != nil {
+		return nil, err
 	}
 
 	s.creds = creds

@@ -1,0 +1,174 @@
+{
+    "total": 2,
+    "currentPage": 1,
+    "resultsPerPage": 60,
+    "numberOfPages": 1,
+    "instruments": [
+        {
+            "id": "b8b7ef58-b270-4762-a256-9d68aebc3e23",
+            "urlSlug": "nasdaq-aapl",
+            "instrumentType": "equity",
+            "symbol": "AAPL",
+            "kidsRecommended": false,
+            "isVolatile": false,
+            "name": "Apple Inc",
+            "description": "Apple Inc. designs, manufactures and markets mobile communication and media devices, personal computers and portable digital music players. The Company sells a range of related software, services, accessories, networking solutions, and third-party digital content and applications. The Company's segments include the Americas, Europe, Greater China, Japan and Rest of Asia Pacific. The Americas segment includes both North and South America. The Europe segment includes European countries, India, the Middle East and Africa. The Greater China segment includes China, Hong Kong and Taiwan. The Rest of Asia Pacific segment includes Australia and the Asian countries not included in the Company's other operating segments. Its products and services include iPhone, iPad, Mac, iPod, Apple Watch, Apple TV, a portfolio of consumer and professional software applications, iPhone OS (iOS), OS X and watchOS operating systems, iCloud, Apple Pay and a range of accessory, service and support offerings.",
+            "categories": [
+                "Manufacturing",
+                "Technology"
+            ],
+            "logoIdentifier": "f4fe0b1a-a074-408f-83ce-3373265e0658",
+            "logos": {
+                "wide": "/api/v1/public/instrument-logo/b8b7ef58-b270-4762-a256-9d68aebc3e23/logo/f4fe0b1a-a074-408f-83ce-3373265e0658/1024/0",
+                "thumb": "/api/v1/public/instrument-logo/b8b7ef58-b270-4762-a256-9d68aebc3e23/logo/f4fe0b1a-a074-408f-83ce-3373265e0658/342/0",
+                "micro": "/api/v1/public/instrument-logo/b8b7ef58-b270-4762-a256-9d68aebc3e23/logo/f4fe0b1a-a074-408f-83ce-3373265e0658/171/0"
+            },
+            "riskRating": 7,
+            "comparisonPrices": {
+                "1d": {
+                    "value": "-0.02",
+                    "percent": "-0.000159",
+                    "max": "0",
+                    "min": "0"
+                },
+                "1w": {
+                    "value": "1.26",
+                    "percent": "0.010112",
+                    "max": "125.89",
+                    "min": "123.54"
+                },
+                "1m": {
+                    "value": "-3.87",
+                    "percent": "-0.029829",
+                    "max": "130.21",
+                    "min": "122.77"
+                },
+                "3m": {
+                    "value": "4.45",
+                    "percent": "0.03665",
+                    "max": "134.84",
+                    "min": "116.36"
+                },
+                "6m": {
+                    "value": "3.62",
+                    "percent": "0.029611",
+                    "max": "143.16",
+                    "min": "116.36"
+                },
+                "1y": {
+                    "value": "42.995",
+                    "percent": "0.518793",
+                    "max": "143.16",
+                    "min": "83.365"
+                },
+                "5y": {
+                    "value": "101.2125",
+                    "percent": "4.104735",
+                    "max": "143.16",
+                    "min": "23.01"
+                }
+            },
+            "marketPrice": "125.87",
+            "marketLastCheck": "2021-06-04T19:59:59Z",
+            "tradingStatus": "active",
+            "exchangeCountry": "usa",
+            "peRatio": "28.35",
+            "marketCap": 2100472113970,
+            "websiteUrl": "https://www.apple.com/",
+            "exchange": "NASDAQ",
+            "legacyImageUrl": null,
+            "dominantColour": "#D1D1D1",
+            "pdsDriveId": null,
+            "assetManager": null,
+            "fixedFeeSpread": null,
+            "managementFeePercent": null,
+            "grossDividendYieldPercent": "0.006616843053100794",
+            "annualisedReturnPercent": "0.5254098430531008",
+            "ceo": "Timothy Cook",
+            "employees": 147000
+        },
+        {
+            "id": "7b128bac-cdf6-485b-a1f7-a5216ab9ff91",
+            "urlSlug": "nyse-aple",
+            "instrumentType": "equity",
+            "symbol": "APLE",
+            "kidsRecommended": false,
+            "isVolatile": false,
+            "name": "Apple Hospitality REIT Inc",
+            "description": "Apple Hospitality REIT, Inc. is a hospitality real estate investment trust. The Company invests in real estate, primarily in the lodging sector, in the United States. The Company owns approximately 235 hotels with more than 30,000 guest rooms located in 87 markets throughout 34 states. The Company's portfolio comprises 104 Marriott-branded hotels, 126 Hilton-branded hotels and three Hyatt-branded hotels. The Company's hotels include various brands, such as Hilton Garden Inn, Courtyard, Homewood Suites, Residence Inn, SpringHill Suites, TownePlace Suites, Fairfield Inn, Home2 Suites, Marriott, Embassy Suites, Hilton and Renaissance. The Company's hotels are located in various states of the United States, such as Alabama, Alaska, Arizona, Arkansas, California, Colorado, Florida, Georgia, Idaho, Indiana, Iowa, Kansas, Maryland, Michigan, Minnesota, Nebraska, New Jersey, North Carolina, Ohio, South Carolina, Texas, Utah and Virginia.",
+            "categories": [
+                "Banking and finance",
+                "Property"
+            ],
+            "logoIdentifier": "96bbe46c-d088-4696-b84b-be8b7c559bd5",
+            "logos": {
+                "wide": "/api/v1/public/instrument-logo/7b128bac-cdf6-485b-a1f7-a5216ab9ff91/logo/96bbe46c-d088-4696-b84b-be8b7c559bd5/1024/0",
+                "thumb": "/api/v1/public/instrument-logo/7b128bac-cdf6-485b-a1f7-a5216ab9ff91/logo/96bbe46c-d088-4696-b84b-be8b7c559bd5/342/0",
+                "micro": "/api/v1/public/instrument-logo/7b128bac-cdf6-485b-a1f7-a5216ab9ff91/logo/96bbe46c-d088-4696-b84b-be8b7c559bd5/171/0"
+            },
+            "riskRating": 7,
+            "comparisonPrices": {
+                "1d": {
+                    "value": "0.0",
+                    "percent": "0.0",
+                    "max": "0",
+                    "min": "0"
+                },
+                "1w": {
+                    "value": "0.2",
+                    "percent": "0.012602",
+                    "max": "16.35",
+                    "min": "15.99"
+                },
+                "1m": {
+                    "value": "0.47",
+                    "percent": "0.030128",
+                    "max": "16.35",
+                    "min": "14.82"
+                },
+                "3m": {
+                    "value": "1.94",
+                    "percent": "0.137297",
+                    "max": "16.35",
+                    "min": "14.39"
+                },
+                "6m": {
+                    "value": "2.79",
+                    "percent": "0.21009",
+                    "max": "16.35",
+                    "min": "12.39"
+                },
+                "1y": {
+                    "value": "3.4",
+                    "percent": "0.26835",
+                    "max": "16.35",
+                    "min": "8.65"
+                },
+                "5y": {
+                    "value": "-2.47",
+                    "percent": "-0.133225",
+                    "max": "20.64",
+                    "min": "4.84"
+                }
+            },
+            "marketPrice": "16.07",
+            "marketLastCheck": "2021-06-04T19:59:59Z",
+            "tradingStatus": "active",
+            "exchangeCountry": "usa",
+            "peRatio": "-16.55",
+            "marketCap": 3594156162,
+            "websiteUrl": "applehospitalityreit.com",
+            "exchange": "NYSE",
+            "legacyImageUrl": null,
+            "dominantColour": null,
+            "pdsDriveId": null,
+            "assetManager": null,
+            "fixedFeeSpread": null,
+            "managementFeePercent": null,
+            "grossDividendYieldPercent": "0.0006222775218719715",
+            "annualisedReturnPercent": "0.26897227752187197",
+            "ceo": "Justin Knight",
+            "employees": 350
+        }
+    ]
+}
