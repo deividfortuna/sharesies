@@ -45,14 +45,6 @@ type Credentials struct {
 	Password string
 }
 
-type sharesiesRequest struct {
-	url      string
-	method   string
-	body     interface{}
-	response interface{}
-	headers  map[string]string
-}
-
 type tokenSession struct {
 	token   *jwt.Token
 	profile *ProfileResponse
@@ -84,13 +76,9 @@ func New(client *http.Client) (*Sharesies, error) {
 
 func (s *Sharesies) Authenticate(ctx context.Context, creds *Credentials) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
-	req := &sharesiesRequest{
-		method:   http.MethodPost,
-		url:      endpointIdentityLogin,
-		body:     &Map{"email": creds.Username, "password": creds.Password, "remember": true},
-		response: p,
-	}
-	err := s.request(ctx, req)
+	body := &Map{"email": creds.Username, "password": creds.Password, "remember": true}
+
+	err := s.request(ctx, http.MethodPost, nil, endpointIdentityLogin, body, p)
 	if err != nil {
 		return nil, err
 	}
@@ -112,19 +100,15 @@ func (s *Sharesies) Authenticate(ctx context.Context, creds *Credentials) (*Prof
 // Return Sharesies Profile
 func (s *Sharesies) Profile(ctx context.Context) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
-	req := &sharesiesRequest{
-		method:   http.MethodGet,
-		url:      endpointIdentityCheck,
-		response: p,
-	}
-	err := s.request(ctx, req)
+
+	err := s.request(ctx, http.MethodGet, nil, endpointIdentityCheck, nil, p)
 	if err != nil {
 		return nil, err
 	}
 
-	er := s.authenticated(p)
-	if er != nil {
-		return nil, er
+	err = s.authenticated(p)
+	if err != nil {
+		return nil, err
 	}
 
 	return p, nil
@@ -133,18 +117,12 @@ func (s *Sharesies) Profile(ctx context.Context) (*ProfileResponse, error) {
 // Return Companies/Funds listed on Sharesies
 func (s *Sharesies) Instruments(ctx context.Context, request *InstrumentsRequest) (*InstrumentResponse, error) {
 	r := &InstrumentResponse{}
-	h, errH := s.headers(ctx)
-	if errH != nil {
-		return nil, errH
+	h, err := s.headers(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	req := &sharesiesRequest{
-		method:   http.MethodPost,
-		url:      endpointInstruments,
-		body:     request,
-		response: r, headers: h,
-	}
-	err := s.request(ctx, req)
+	err = s.request(ctx, http.MethodPost, h, endpointInstruments, request, r)
 	return r, err
 }
 
@@ -160,14 +138,7 @@ func (s *Sharesies) CostBuy(ctx context.Context, fundId string, amount float64) 
 
 	s.reAuthenticate(ctx)
 
-	req := &sharesiesRequest{
-		method:   http.MethodPost,
-		url:      endpointCostBuy,
-		body:     cr,
-		response: r,
-	}
-
-	err := s.request(ctx, req)
+	err := s.request(ctx, http.MethodPost, nil, endpointCostBuy, cr, r)
 	return r, err
 }
 
@@ -186,14 +157,7 @@ func (s *Sharesies) Buy(ctx context.Context, costBuy *CostBuyResponse) (*Profile
 
 	s.reAuthenticate(ctx)
 
-	req := &sharesiesRequest{
-		method:   http.MethodPost,
-		url:      endpointCreateBuy,
-		body:     br,
-		response: r,
-	}
-
-	err := s.request(ctx, req)
+	err := s.request(ctx, http.MethodPost, nil, endpointCreateBuy, br, r)
 	return r, err
 }
 
@@ -228,13 +192,9 @@ func (s *Sharesies) headers(ctx context.Context) (map[string]string, error) {
 
 func (s *Sharesies) reAuthenticate(ctx context.Context) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
-	req := &sharesiesRequest{
-		method:   http.MethodPost,
-		url:      endpointIdentityReAuth,
-		body:     &Map{"password": s.creds.Password, "acting_as_id": s.session.profile.UserList[0].ID},
-		response: p,
-	}
-	err := s.request(ctx, req)
+	body := &Map{"password": s.creds.Password, "acting_as_id": s.session.profile.UserList[0].ID}
+
+	err := s.request(ctx, http.MethodPost, nil, endpointIdentityReAuth, body, p)
 	if err != nil {
 		return nil, err
 	}
@@ -251,12 +211,13 @@ func (s *Sharesies) reAuthenticate(ctx context.Context) (*ProfileResponse, error
 	return p, nil
 }
 
-func (s *Sharesies) request(ctx context.Context, request *sharesiesRequest) error {
-	b := &bytes.Buffer{}
-	e := json.NewEncoder(b)
-	e.Encode(request.body)
+func (s *Sharesies) request(ctx context.Context, method string, headers map[string]string, url string, body interface{}, response interface{}) error {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
 
-	req, err := http.NewRequestWithContext(ctx, request.method, request.url, b)
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(b))
 	if err != nil {
 		return err
 	}
@@ -265,10 +226,8 @@ func (s *Sharesies) request(ctx context.Context, request *sharesiesRequest) erro
 	req.Header.Add("Accept", "*/*")
 	req.Header.Add("Content-Type", "application/json")
 
-	if request.headers != nil {
-		for key, value := range request.headers {
-			req.Header.Add(key, value)
-		}
+	for key, value := range headers {
+		req.Header.Add(key, value)
 	}
 
 	res, err := s.HttpClient.Do(req)
@@ -289,6 +248,6 @@ func (s *Sharesies) request(ctx context.Context, request *sharesiesRequest) erro
 		defer res.Body.Close()
 	}
 
-	json.Unmarshal(bd, &request.response)
+	json.Unmarshal(bd, &response)
 	return nil
 }

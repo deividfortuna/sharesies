@@ -2,6 +2,8 @@ package sharesies_test
 
 import (
 	"context"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -20,9 +22,10 @@ type MockClient struct {
 }
 
 func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
-	args := m.Called(&http.Request{
-		Method: req.Method, URL: req.URL,
-	})
+	body, _ := ioutil.ReadAll(req.Body)
+	req.Body.Close()
+
+	args := m.Called(req.Method, req.URL, string(body))
 
 	return args.Get(0).(*http.Response), nil
 }
@@ -74,11 +77,9 @@ func Test_Authenticate(t *testing.T) {
 func Test_Authenticate_Fail(t *testing.T) {
 	mockClient := &MockClient{}
 	url, _ := url.Parse("https://app.sharesies.nz/api/identity/login")
+	body := marshal(&sharesies.Map{"email": "username", "password": "password", "remember": true})
 
-	mockClient.On("Do", &http.Request{
-		Method: http.MethodPost,
-		URL:    url,
-	}).Return(&http.Response{StatusCode: http.StatusUnauthorized}, nil)
+	mockClient.On("Do", http.MethodPost, url, body).Return(&http.Response{StatusCode: http.StatusUnauthorized}, nil)
 
 	s := sharesies.Sharesies{
 		HttpClient: mockClient,
@@ -100,10 +101,7 @@ func Test_Profile(t *testing.T) {
 	profileUrl, _ := url.Parse("https://app.sharesies.nz/api/identity/check")
 	profileBody, _ := os.Open("testdata/profile.json")
 
-	mockClient.On("Do", &http.Request{
-		Method: http.MethodGet,
-		URL:    profileUrl,
-	}).Return(&http.Response{StatusCode: http.StatusOK, Body: profileBody}, nil)
+	mockClient.On("Do", http.MethodGet, profileUrl, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK, Body: profileBody}, nil)
 
 	s := sharesies.Sharesies{
 		HttpClient: mockClient,
@@ -124,14 +122,18 @@ func Test_Instruments(t *testing.T) {
 	mockClient := &MockClient{}
 	authSuccess(mockClient)
 
-	//?Page=1&PerPage=60&Sort=relevance&PriceChangeTime=1y&Query=apple
+	instrumentRequest := &sharesies.InstrumentsRequest{
+		Page:            1,
+		Perpage:         60,
+		Sort:            "relevance",
+		Pricechangetime: "1y",
+		Query:           "apple",
+	}
+
 	instrumentsUrl, _ := url.Parse("https://data.sharesies.nz/api/v1/instruments")
 	instrumentsBody, _ := os.Open("testdata/instruments.json")
 
-	mockClient.On("Do", &http.Request{
-		Method: http.MethodPost,
-		URL:    instrumentsUrl,
-	}).Return(&http.Response{StatusCode: http.StatusOK, Body: instrumentsBody}, nil)
+	mockClient.On("Do", http.MethodPost, instrumentsUrl, marshal(instrumentRequest)).Return(&http.Response{StatusCode: http.StatusOK, Body: instrumentsBody}, nil)
 
 	s := sharesies.Sharesies{
 		HttpClient: mockClient,
@@ -140,13 +142,7 @@ func Test_Instruments(t *testing.T) {
 	ctx := context.Background()
 	s.Authenticate(ctx, &sharesies.Credentials{Username: "username", Password: "password"})
 
-	i, err := s.Instruments(ctx, &sharesies.InstrumentsRequest{
-		Page:            1,
-		Perpage:         60,
-		Sort:            "relevance",
-		Pricechangetime: "1y",
-		Query:           "apple",
-	})
+	i, err := s.Instruments(ctx, instrumentRequest)
 	mockClient.AssertExpectations(t)
 
 	assert.Nil(t, err)
@@ -160,11 +156,16 @@ func Test_CostBuy(t *testing.T) {
 
 	costBuyUrl, _ := url.Parse("https://app.sharesies.nz/api/order/cost-buy")
 	costBuyBody, _ := os.Open("testdata/costbuy.json")
+	body := marshal(&sharesies.CostBuyRequest{
+		FundID:     "b8b7ef58-b270-4762-a256-9d68aebc3e23",
+		ActingAsID: "USER_ID",
+		Order: &sharesies.Order{
+			Type:           sharesies.OrderTypeDollarMarket,
+			CurrencyAmount: "10.00",
+		},
+	})
 
-	mockClient.On("Do", &http.Request{
-		Method: http.MethodPost,
-		URL:    costBuyUrl,
-	}).Return(&http.Response{StatusCode: http.StatusOK, Body: costBuyBody}, nil)
+	mockClient.On("Do", http.MethodPost, costBuyUrl, body).Return(&http.Response{StatusCode: http.StatusOK, Body: costBuyBody}, nil)
 
 	s := sharesies.Sharesies{
 		HttpClient: mockClient,
@@ -183,19 +184,20 @@ func Test_CostBuy(t *testing.T) {
 func reAuthSuccess(mockClient *MockClient) {
 	reAuthUrl, _ := url.Parse("https://app.sharesies.nz/api/identity/reauthenticate")
 	authBody, _ := os.Open("testdata/authenticated.json")
-	mockClient.On("Do", &http.Request{
-		Method: http.MethodPost,
-		URL:    reAuthUrl,
-	}).Return(&http.Response{StatusCode: http.StatusOK, Body: authBody}, nil)
+	body := marshal(&sharesies.Map{"password": "password", "acting_as_id": "USER_ID"})
+
+	mockClient.On("Do", http.MethodPost, reAuthUrl, body).Return(&http.Response{StatusCode: http.StatusOK, Body: authBody}, nil)
 }
 
 func authSuccess(mockClient *MockClient) {
 	authUrl, _ := url.Parse("https://app.sharesies.nz/api/identity/login")
 	authBody, _ := os.Open("testdata/authenticated.json")
+	body := marshal(&sharesies.Map{"email": "username", "password": "password", "remember": true})
 
-	mockClient.On("Do", &http.Request{
-		Method: http.MethodPost,
-		URL:    authUrl,
-	}).Return(&http.Response{StatusCode: http.StatusOK, Body: authBody}, nil)
+	mockClient.On("Do", http.MethodPost, authUrl, body).Return(&http.Response{StatusCode: http.StatusOK, Body: authBody}, nil)
+}
 
+func marshal(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
 }
