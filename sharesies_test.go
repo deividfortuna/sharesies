@@ -10,12 +10,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/deividfortuna/sharesies"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-)
 
-type MockDoType func(req *http.Request) (*http.Response, error)
+	"github.com/deividfortuna/sharesies"
+)
 
 type MockClient struct {
 	mock.Mock
@@ -159,7 +158,7 @@ func Test_CostBuy(t *testing.T) {
 	body := marshal(&sharesies.CostBuyRequest{
 		FundID:     "b8b7ef58-b270-4762-a256-9d68aebc3e23",
 		ActingAsID: "USER_ID",
-		Order: &sharesies.Order{
+		Order: &sharesies.OrderBuy{
 			Type:           sharesies.OrderTypeDollarMarket,
 			CurrencyAmount: "10.00",
 		},
@@ -175,6 +174,37 @@ func Test_CostBuy(t *testing.T) {
 	s.Authenticate(ctx, &sharesies.Credentials{Username: "username", Password: "password"})
 
 	i, err := s.CostBuy(ctx, "b8b7ef58-b270-4762-a256-9d68aebc3e23", 10.00)
+	mockClient.AssertExpectations(t)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, i)
+}
+
+func Test_CostSell(t *testing.T) {
+	mockClient := &MockClient{}
+	authSuccess(mockClient)
+	reAuthSuccess(mockClient)
+
+	costBuyUrl, _ := url.Parse("https://app.sharesies.nz/api/order/cost-sell")
+	costBuyBody, _ := os.Open("testdata/costsell.json")
+	body := marshal(&sharesies.CostSellRequest{
+		FundID:     "b8b7ef58-b270-4762-a256-9d68aebc3e23",
+		ActingAsID: "USER_ID",
+		Order: &sharesies.OrderSell{
+			Type:           sharesies.OrderTypeShareMarket, ShareAmount: "0.001000",
+		},
+	})
+
+	mockClient.On("Do", http.MethodPost, costBuyUrl, body).Return(&http.Response{StatusCode: http.StatusOK, Body: costBuyBody}, nil)
+
+	s := sharesies.Sharesies{
+		HttpClient: mockClient,
+	}
+
+	ctx := context.Background()
+	s.Authenticate(ctx, &sharesies.Credentials{Username: "username", Password: "password"})
+
+	i, err := s.CostSell(ctx, "b8b7ef58-b270-4762-a256-9d68aebc3e23", 0.001)
 	mockClient.AssertExpectations(t)
 
 	assert.Nil(t, err)

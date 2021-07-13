@@ -21,6 +21,8 @@ const (
 	endpointInstruments    = "https://data.sharesies.nz/api/v1/instruments"
 	endpointCostBuy        = "https://app.sharesies.nz/api/order/cost-buy"
 	endpointCreateBuy      = "https://app.sharesies.nz/api/order/create-buy"
+	endpointCostSell       = "https://app.sharesies.nz/api/order/cost-sell"
+	endpointCreateSell     = "https://app.sharesies.nz/api/order/create-sell"
 )
 
 type Map map[string]interface{}
@@ -39,7 +41,7 @@ type Sharesies struct {
 	session    *tokenSession
 }
 
-// Sharesies Cedentials
+// Credentials Sharesies
 type Credentials struct {
 	Username string
 	Password string
@@ -97,7 +99,7 @@ func (s *Sharesies) Authenticate(ctx context.Context, creds *Credentials) (*Prof
 	return p, err
 }
 
-// Return Sharesies Profile
+// Profile returns Sharesies Profile
 func (s *Sharesies) Profile(ctx context.Context) (*ProfileResponse, error) {
 	p := &ProfileResponse{}
 
@@ -114,7 +116,7 @@ func (s *Sharesies) Profile(ctx context.Context) (*ProfileResponse, error) {
 	return p, nil
 }
 
-// Return Companies/Funds listed on Sharesies
+// Instruments returns Companies/Funds listed on Sharesies
 func (s *Sharesies) Instruments(ctx context.Context, request *InstrumentsRequest) (*InstrumentResponse, error) {
 	r := &InstrumentResponse{}
 	h, err := s.headers(ctx)
@@ -126,10 +128,10 @@ func (s *Sharesies) Instruments(ctx context.Context, request *InstrumentsRequest
 	return r, err
 }
 
-// Cost to buy stocks from the NZX Market
+// CostBuy return Cost to buy stocks from the NZX Market
 func (s *Sharesies) CostBuy(ctx context.Context, fundId string, amount float64) (*CostBuyResponse, error) {
 	r := &CostBuyResponse{}
-	o := &Order{Type: OrderTypeDollarMarket, CurrencyAmount: fmt.Sprintf("%.2f", amount)}
+	o := &OrderBuy{Type: OrderTypeDollarMarket, CurrencyAmount: fmt.Sprintf("%.2f", amount)}
 	cr := &CostBuyRequest{
 		FundID:     fundId,
 		ActingAsID: s.session.profile.UserList[0].ID,
@@ -142,7 +144,7 @@ func (s *Sharesies) CostBuy(ctx context.Context, fundId string, amount float64) 
 	return r, err
 }
 
-// Purchase stocks from the NZX Market
+// Buy purchase stocks from the NZX Market
 func (s *Sharesies) Buy(ctx context.Context, costBuy *CostBuyResponse) (*ProfileResponse, error) {
 	r := &ProfileResponse{}
 
@@ -158,6 +160,38 @@ func (s *Sharesies) Buy(ctx context.Context, costBuy *CostBuyResponse) (*Profile
 	s.reAuthenticate(ctx)
 
 	err := s.request(ctx, http.MethodPost, nil, endpointCreateBuy, br, r)
+	return r, err
+}
+
+func (s *Sharesies) CostSell(ctx context.Context, foundId string, shareAmount float64) (*CostSellResponse, error) {
+	r := &CostSellResponse{}
+	o := &OrderSell{Type: OrderTypeShareMarket, ShareAmount: fmt.Sprintf("%.6f", shareAmount)}
+	sr := &CostSellRequest{FundID: foundId, ActingAsID: s.session.profile.UserList[0].ID, Order: o}
+
+	_, err := s.reAuthenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.request(ctx, http.MethodPost, nil, endpointCostSell, sr, r)
+	return r, err
+}
+
+func (s *Sharesies) Sell(ctx context.Context, sellBuy *CostSellResponse) (*ProfileResponse, error) {
+	r := &ProfileResponse{}
+
+	sr := CreateSellRequest{
+		FundID: sellBuy.FundID,
+		ActingAsID: s.session.profile.UserList[0].ID,
+		Order: sellBuy.Request,
+	}
+
+	_, err := s.reAuthenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.request(ctx, http.MethodPost, nil, endpointCreateSell, sr, r)
 	return r, err
 }
 
@@ -248,6 +282,5 @@ func (s *Sharesies) request(ctx context.Context, method string, headers map[stri
 		defer res.Body.Close()
 	}
 
-	json.Unmarshal(bd, &response)
-	return nil
+	return json.Unmarshal(bd, &response)
 }
