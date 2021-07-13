@@ -4,6 +4,7 @@ import "time"
 
 const (
 	OrderTypeDollarMarket = "dollar_market"
+	OrderTypeShareMarket = "share_market"
 
 	PaymentCurrency = "nzd"
 	PaymentType     = "direct"
@@ -229,24 +230,18 @@ type Company struct {
 	Employees                 int         `json:"employees" validate:"required"`
 }
 
+// Buy Transactions Types
+
 type CostBuyRequest struct {
-	FundID     string `json:"fund_id" validate:"required"`
-	ActingAsID string `json:"acting_as_id" validate:"required"`
-	Order      *Order `json:"order" validate:"required"`
+	FundID     string    `json:"fund_id" validate:"required"`
+	ActingAsID string    `json:"acting_as_id" validate:"required"`
+	Order      *OrderBuy `json:"order" validate:"required"`
 }
 
-type Order struct {
+type OrderBuy struct {
 	Type           string `json:"type" validate:"required"`
-	CurrencyAmount string `json:"currency_amount" validate:"required"`
-}
-
-type CostBuyResponse struct {
-	ExpectedFee      string              `json:"expected_fee" validate:"required"`
-	FundID           string              `json:"fund_id" validate:"required"`
-	PaymentBreakdown []*PaymentBreakdown `json:"payment_breakdown" validate:"required"`
-	Request          *Order              `json:"request" validate:"required"`
-	TotalCost        string              `json:"total_cost" validate:"required"`
-	Type             string              `json:"type" validate:"required"`
+	CurrencyAmount string `json:"currency_amount,omitempty"`
+	ShareAmount    string `json:"share_amount,omitempty"`
 }
 
 type PaymentBreakdown struct {
@@ -255,11 +250,46 @@ type PaymentBreakdown struct {
 	Type         string `json:"type" validate:"required"`
 }
 
+type CostBuyResponse struct {
+	ExpectedFee      string              `json:"expected_fee" validate:"required"`
+	FundID           string              `json:"fund_id" validate:"required"`
+	PaymentBreakdown []*PaymentBreakdown `json:"payment_breakdown" validate:"required"`
+	Request          *OrderBuy           `json:"request" validate:"required"`
+	TotalCost        string              `json:"total_cost" validate:"required"`
+	Type             string              `json:"type" validate:"required"`
+}
+
 type CreateBuyRequest struct {
 	FundID           string              `json:"fund_id" validate:"required"`
 	ActingAsID       string              `json:"acting_as_id" validate:"required"`
-	Order            *Order              `json:"order" validate:"required"`
+	Order            *OrderBuy           `json:"order" validate:"required"`
 	IdempotencyKey   string              `json:"idempotency_key" validate:"required"`
 	PaymentBreakdown []*PaymentBreakdown `json:"payment_breakdown" validate:"required"`
 	ExpectedFee      string              `json:"expected_fee" validate:"required"`
+}
+
+// Sell Transactions Types
+
+type CostSellRequest struct {
+	FundID     string `json:"fund_id" validate:"required"`
+	ActingAsID string `json:"acting_as_id" validate:"required"`
+	Order      *OrderSell `json:"order" validate:"required"`
+}
+
+type OrderSell struct {
+	Type           string `json:"type" validate:"required"`
+	ShareAmount    string `json:"share_amount" validate:"required"`
+}
+
+type CostSellResponse struct {
+	FundID  string `json:"fund_id" validate:"required"`
+	Request *OrderSell `json:"request" validate:"required"`
+	Type    string `json:"type" validate:"required"`
+}
+
+type CreateSellRequest struct {
+	FundID           string              `json:"fund_id" validate:"required"`
+	ActingAsID       string              `json:"acting_as_id" validate:"required"`
+	Order            *OrderSell           `json:"order" validate:"required"`
+	IdempotencyKey   string              `json:"idempotency_key" validate:"required"`
 }

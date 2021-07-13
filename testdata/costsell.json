@@ -1,0 +1,8 @@
+{
+	"fund_id": "deff31bd-625b-4a82-bbc2-064c7b70b97c",
+	"request": {
+		"share_amount": "0.001",
+		"type": "share_market"
+	},
+	"type": "order_cost_sell"
+}
